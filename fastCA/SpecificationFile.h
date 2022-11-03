@@ -25,18 +25,21 @@
 
 class SpecificationFile {
 public:
-  SpecificationFile(){};
-  SpecificationFile(const std::string &filename);
-  void setStrenth(const int s) { strength = s; }
-  void initialize(const std::vector<unsigned> &value_counts) {
-    options.initialize(value_counts);
-  }
-  const Options &getOptions() const { return options; }
-  unsigned getStrenth() const { return strength; }
+    SpecificationFile(){};
+    SpecificationFile(const std::string &filename);
+    void setStrenth(const int s) { strength = s; }
+    void setIndex(const int i) { index = i; }
+    void initialize(const std::vector<unsigned> &value_counts) {
+      options.initialize(value_counts);
+    }
+    const Options &getOptions() const { return options; }
+    unsigned getStrenth() const { return strength; }
+    unsigned getIndex() const { return index; }
 
-private:
-  Options options;
-  unsigned strength;
+  private:
+    Options options;
+    unsigned strength;
+    unsigned index;
 };
 
 #endif /* end of include guard: SPECIFICATIONFILE_H */

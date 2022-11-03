@@ -15,7 +15,6 @@
 #include <mutex>
 #include <sys/time.h>
 #include <thread>
-
 #include "ConstraintFile.H"
 #include "Coverage.h"
 // #include "OptionTupleSet.h"
@@ -51,7 +50,7 @@ private:
   Coverage coverage;
   TupleSet uncoveredTuples;
   std::set<unsigned> varInUncovertuples;
-  LineVarTupleSet oneCoveredTuples;
+  LineVarTupleSet NCoveredTuples;
   Tabu<Entry> entryTabu;
   std::string outfile;
 

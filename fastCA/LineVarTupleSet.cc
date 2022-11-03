@@ -24,11 +24,11 @@ void LineVarTupleSet::initialize(const SpecificationFile &specificationFile,
   lineOneCoveredCount.resize(array_size, 0);
 }
 
-void LineVarTupleSet::pushOneCoveredTuple(
-    const Coverage &coverage, const std::vector<size_t> &coverByLineindex) {
+void LineVarTupleSet::pushNCoveredTuple(
+    const Coverage &coverage, const std::vector<std::vector<int>> &coverByLineindex) {
   for (unsigned encode = 0; encode < coverage.tupleCount(); ++encode) {
     if (coverage.coverCount(encode) == 1) {
-      push(encode, coverByLineindex[encode], coverage.getTuple(encode));
+      push(encode, coverByLineindex[encode][encode], coverage.getTuple(encode));
     }
   }
 }

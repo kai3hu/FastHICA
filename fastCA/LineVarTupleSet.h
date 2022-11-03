@@ -23,8 +23,8 @@ public:
   void push(const unsigned encode, const unsigned lineIndex,
             const std::vector<unsigned> &tuple);
 
-  void pushOneCoveredTuple(const Coverage &coverage,
-                           const std::vector<size_t> &coverByLineindex);
+  void pushNCoveredTuple(const Coverage &coverage,
+                           const std::vector<std::vector<int>> &coverByLineindex);
 
   void exchange_row(unsigned lineIndex1, unsigned lineIndex2) {
     lineVarTupleSet[lineIndex1].swap(lineVarTupleSet[lineIndex2]);

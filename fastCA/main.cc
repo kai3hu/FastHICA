@@ -10,12 +10,7 @@
 using namespace std;
 
 int main(int argc, char const *argv[]) {
-  if (argc < 3) {
-    return 1;
-  }
-  if (argc % 2 != 1) {
-    return 1;
-  }
+
 
   string modelFile;
   string constrFile;
@@ -25,18 +20,20 @@ int main(int argc, char const *argv[]) {
   int threadsNum;
   int minScoreTaskSize;
   int minReplaceTaskSize;
+  int HighIndex;
   string outfile;
 
   string testFile("");
 
-  map<string, string> parameters_map = {{"--file", ""},
-                                        {"--strength", "2"},
-                                        {"--time", "0"},
-                                        {"--seed", "1"},
-                                        {"--threads", "1"},
-                                        {"--minScoreTaskSize", "100"},
-                                        {"--minReplaceTaskSize", "120"},
-                                        {"--outfile", ""}};
+    map<string, string> parameters_map = {{"--file", "../example/ex.txt"},
+                                          {"--strength", "2"},
+                                          {"--highindex", "2"},
+                                          {"--time", "10"},
+                                          {"--seed", "1"},
+                                          {"--threads", "1"},
+                                          {"--minScoreTaskSize", "100"},
+                                          {"--minReplaceTaskSize", "120"},
+                                          {"--outfile", "./out.txt"}};
 
   vector<string> parameterVec;
   for (int i = 1; i < argc - 1; i += 2) {
@@ -58,6 +55,11 @@ int main(int argc, char const *argv[]) {
     return 1;
   } else {
     coverageStrength = atoi(parameters_map["--strength"].c_str());
+  }
+  if (atoi(parameters_map["--highindex"].c_str()) < 1) {
+      return 1;
+  } else {
+      HighIndex = atoi(parameters_map["--highindex"].c_str());
   }
 
   if (atoi(parameters_map["--time"].c_str()) < 0) {
@@ -93,7 +95,8 @@ int main(int argc, char const *argv[]) {
   TestSetFile testSetFile;
   io.readInstance(modelFile, specificationFile, constraintFile, testSetFile);
   specificationFile.setStrenth(coverageStrength);
-
+  specificationFile.setIndex(HighIndex);
+    
   testSetFile.convert2acts(specificationFile);
   localSearch(specificationFile, constraintFile, testSetFile, maxTime, seed,
               threadsNum, minScoreTaskSize, minReplaceTaskSize, outfile);

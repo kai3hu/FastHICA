@@ -149,6 +149,7 @@ CoveringArray::~CoveringArray() {
 void CoveringArray::actsInitialize(const std::string file_name) {
   const Options &options = specificationFile.getOptions();
   const unsigned &strenth = specificationFile.getStrenth();
+  const unsigned &index = specificationFile.getIndex();
   std::ifstream res_file(file_name);
   if (!res_file.is_open()) {
     std::cerr << "file open failed" << std::endl;
@@ -182,11 +183,20 @@ void CoveringArray::actsInitialize(const std::string file_name) {
       getline(res_file, line);
     }
   }
+    int temsize = array.size();
+    for(int i=1;i<index;i++)
+    {
+        for(int j=0;j<temsize;j++)
+        {
+            array.push_back(array[j]);
+        }
+    }
   res_file.close();
 
   struct timeval start;
   gettimeofday(&start, NULL);
-  std::vector<size_t> coverByLineIndex(coverage.tupleSize());
+  std::vector<std::vector<int>> coverByLineIndex(coverage.tupleSize());
+  
   std::vector<unsigned> tuple(strenth);
   for (unsigned lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
     auto &line = array[lineIndex];
@@ -197,7 +207,8 @@ void CoveringArray::actsInitialize(const std::string file_name) {
       }
       //			cover(coverage.encode(columns, tuple));
       unsigned encode = coverage.encode(columns, tuple);
-      coverByLineIndex[encode] = lineIndex;
+        if(coverByLineIndex[encode].size()<2){
+            coverByLineIndex[encode].push_back(lineIndex);}
       coverage.cover(encode);
     }
   }
@@ -212,8 +223,8 @@ void CoveringArray::actsInitialize(const std::string file_name) {
   entryTabu.initialize(Entry(array.size(), array.size()));
   std::cout << "time    size  step" << std::endl;
   tmpPrint();
-  oneCoveredTuples.initialize(specificationFile, array.size());
-  oneCoveredTuples.pushOneCoveredTuple(coverage, coverByLineIndex);
+  NCoveredTuples.initialize(specificationFile, array.size());   //todo
+  NCoveredTuples.pushNCoveredTuple(coverage, coverByLineIndex);
 #ifndef NDEBUG
   int i = 0;
   for (auto &line : array) {
@@ -318,7 +329,7 @@ void CoveringArray::removeUselessRows() {
   std::vector<unsigned> tmpTuple(strength);
 
   for (size_t lineIndex = 0; lineIndex < array.size();) {
-    if (oneCoveredTuples.oneCoveredCount(lineIndex) == 0 &&
+    if (NCoveredTuples.oneCoveredCount(lineIndex) == 0 &&
         !testSet.isExistedRow(lineIndex)) {
       const std::vector<unsigned> &line = array[lineIndex];
       for (std::vector<unsigned> columns = combinadic.begin(strength);
@@ -338,8 +349,8 @@ void CoveringArray::removeUselessRows() {
           entry.setRow(array.size() - 1);
         }
       }
-      oneCoveredTuples.exchange_row(lineIndex, array.size() - 1);
-      oneCoveredTuples.pop_back_row();
+      NCoveredTuples.exchange_row(lineIndex, array.size() - 1);
+      NCoveredTuples.pop_back_row();
       array.pop_back();
     } else {
       ++lineIndex;
@@ -365,8 +376,8 @@ void CoveringArray::removeOneRowRandom() {
   }
 
   std::swap(array[array.size() - 1], array[rowToremoveIndex]);
-  oneCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1);
-  oneCoveredTuples.pop_back_row();
+  NCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1);
+  NCoveredTuples.pop_back_row();
   for (auto &entry : entryTabu) {
     if (entry.getRow() == array.size() - 1) {
       entry.setRow(rowToremoveIndex);
@@ -1020,7 +1031,7 @@ CoveringArray::multiVarScoreOfRow(const std::vector<unsigned> &sortedMultiVars,
   }
   std::vector<long long> overlapCount(changedColumns.size() + 1, 0);
   for (auto cc : changedColumns) {
-    for (auto &ecEntry : oneCoveredTuples.getECbyLineVar(lineIndex, line[cc])) {
+    for (auto &ecEntry : NCoveredTuples.getECbyLineVar(lineIndex, line[cc])) {
       unsigned tupleEncode = ecEntry.encode;
       const std::vector<unsigned> &tuple = coverage.getTuple(tupleEncode);
       const std::vector<unsigned> &columns = coverage.getColumns(tupleEncode);
@@ -1221,9 +1232,9 @@ long long CoveringArray::varScoreOfRow(const unsigned var,
     }
   }
   return coverChangeCount -
-         oneCoveredTuples.getECbyLineVar(lineIndex, line[varOption]).size();
+         NCoveredTuples.getECbyLineVar(lineIndex, line[varOption]).size();
   for (auto &ecEntry :
-       oneCoveredTuples.getECbyLineVar(lineIndex, line[varOption])) {
+       NCoveredTuples.getECbyLineVar(lineIndex, line[varOption])) {
     unsigned tupleEncode = ecEntry.encode;
     const std::vector<unsigned> &tuple = coverage.getTuple(tupleEncode);
     const std::vector<unsigned> &columns = coverage.getColumns(tupleEncode);
@@ -1408,7 +1419,7 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex) {
   unsigned coverCount = coverage.coverCount(encode);
   if (coverCount == 1) {
     uncoveredTuples.pop(encode);
-    oneCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode));
+    NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode));
   }
   if (coverCount == 2) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
@@ -1426,7 +1437,7 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex) {
         }
       }
       if (match) {
-        oneCoveredTuples.pop(encode, lineIndex, tuple);
+        NCoveredTuples.pop(encode, lineIndex, tuple);
         break;
       }
     }
@@ -1444,7 +1455,7 @@ void CoveringArray::cover_with_lock(const unsigned encode,
     }
     {
       std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-      oneCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode));
+      NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode));
     }
   }
   if (coverCount == 2) {
@@ -1465,7 +1476,7 @@ void CoveringArray::cover_with_lock(const unsigned encode,
       if (match) {
         {
           std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-          oneCoveredTuples.pop(encode, lineIndex, tuple);
+          NCoveredTuples.pop(encode, lineIndex, tuple);
         }
         break;
       }
@@ -1479,7 +1490,7 @@ void CoveringArray::uncover(const unsigned encode,
   unsigned coverCount = coverage.coverCount(encode);
   if (coverCount == 0) {
     uncoveredTuples.push(encode);
-    oneCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
+    NCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
   }
   if (coverCount == 1) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
@@ -1497,7 +1508,7 @@ void CoveringArray::uncover(const unsigned encode,
         }
       }
       if (match) {
-        oneCoveredTuples.push(encode, lineIndex, tuple);
+        NCoveredTuples.push(encode, lineIndex, tuple);
         break;
       }
     }
@@ -1515,7 +1526,7 @@ void CoveringArray::uncover_with_lock(const unsigned encode,
     }
     {
       std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-      oneCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
+      NCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
     }
   }
   if (coverCount == 1) {
@@ -1536,7 +1547,7 @@ void CoveringArray::uncover_with_lock(const unsigned encode,
       if (match) {
         {
           std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-          oneCoveredTuples.push(encode, lineIndex, tuple);
+          NCoveredTuples.push(encode, lineIndex, tuple);
         }
         break;
       }
