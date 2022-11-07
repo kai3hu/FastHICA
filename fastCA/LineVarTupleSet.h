@@ -6,12 +6,18 @@
 #include "Combinadic.h"
 #include "Coverage.h"
 #include "SpecificationFile.h"
-
+using namespace std;
 struct ECEntry {
 public:
   unsigned encode;
   size_t column_index;
 };
+struct Mapt {
+public:
+int row_index;
+size_t column_index;
+};
+
 
 class LineVarTupleSet {
 public:
@@ -21,33 +27,33 @@ public:
   void pop(const unsigned encode, const unsigned lineIndex,
            const std::vector<unsigned> &tuple);
   void push(const unsigned encode, const unsigned lineIndex,
-            const std::vector<unsigned> &tuple);
+            const std::vector<unsigned> &tuple, const unsigned pushtimes);
 
   void pushNCoveredTuple(const Coverage &coverage,
-                           const std::vector<std::vector<int>> &coverByLineindex);
+                           const std::vector<std::vector<int>> &coverByLineindex, const unsigned index);
 
   void exchange_row(unsigned lineIndex1, unsigned lineIndex2) {
     lineVarTupleSet[lineIndex1].swap(lineVarTupleSet[lineIndex2]);
-    std::swap(lineOneCoveredCount[lineIndex1], lineOneCoveredCount[lineIndex2]);
+    std::swap(lineNCoveredCount[lineIndex1], lineNCoveredCount[lineIndex2]);
   }
   void pop_back_row() {
     lineVarTupleSet.pop_back();
-    lineOneCoveredCount.pop_back();
+    lineNCoveredCount.pop_back();
   }
 
   const std::vector<ECEntry> &getECbyLineVar(unsigned lineIndex, unsigned var) {
     return lineVarTupleSet[lineIndex][var];
   }
 
-  unsigned oneCoveredCount(unsigned lineIndex) {
-    return lineOneCoveredCount[lineIndex];
+  unsigned NCoveredCount(unsigned lineIndex) {
+    return lineNCoveredCount[lineIndex];
   }
 
 private:
-  std::vector<size_t> lineOneCoveredCount;
+  std::vector<size_t> lineNCoveredCount;
 
   std::vector<std::vector<std::vector<ECEntry>>> lineVarTupleSet;
-  std::vector<std::vector<size_t>> varMapping;
+  std::vector<vector<vector<Mapt>>> varMapping; //
 };
 
 #endif /* end of include guard: LINEVARTUPLESET_H_MBOTX5KJ */

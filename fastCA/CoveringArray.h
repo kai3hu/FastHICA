@@ -74,10 +74,10 @@ private:
   std::mutex uncoveredTuplesMutex;
   std::mutex oneCoveredTuplesMutex;
 
-  void cover(const unsigned encode, const unsigned oldLineIndex);
-  void cover_with_lock(const unsigned encode, const unsigned oldLineIndex);
-  void uncover(const unsigned encode, const unsigned oldLineIndex);
-  void uncover_with_lock(const unsigned encode, const unsigned oldLineIndex);
+  void cover(const unsigned encode, const unsigned oldLineIndex,const unsigned index);
+  void cover_with_lock(const unsigned encode, const unsigned oldLineIndex,const unsigned index);
+  void uncover(const unsigned encode, const unsigned oldLineIndex, const unsigned index);
+  void uncover_with_lock(const unsigned encode, const unsigned oldLineIndex, const unsigned index);
   void updateTestSet();
   void replaceRow(const unsigned lineIndex, const unsigned encode);
   void replaceRowforTuple(const unsigned encode);

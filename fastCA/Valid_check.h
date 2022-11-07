@@ -118,7 +118,7 @@ public:
     return sat;
   }
 
-  // TODO: same variables in one clause, such as "a != 0 || a != 1"
+
   void addClause(Clause &&c) {
     std::sort(c.begin(), c.end());
     if (c.empty()) {
