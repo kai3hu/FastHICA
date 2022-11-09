@@ -39,7 +39,7 @@ void LineVarTupleSet::pushNCoveredTuple(
     if (coverage.coverCount(encode) == index) {
         for (unsigned i = 0; i < index ; i++)
         {
-      push(encode, coverByLineindex[encode][i], coverage.getTuple(encode), i);
+            push(encode, coverByLineindex[encode][i], coverage.getTuple(encode), i);
         }
     }
   }
@@ -55,18 +55,6 @@ void LineVarTupleSet::push(const unsigned encode, const unsigned lineIndex,
       varMapping[encode][i][pushtimes].column_index = lineVarTupleSet[lineIndex][var].size();
       lineVarTupleSet[lineIndex][var].push_back({encode, i});
     }
-  
-
-    
-
-//  lineNCoveredCount[lineIndex]++;
-//  for (size_t i = 0; i < tuple.size(); ++i) {
-//    unsigned var = tuple[i];
-//    varMapping[encode][i][t].row_index = lineIndex[t];
-//    varMapping[encode][i][t].column_index = lineVarTupleSet[lineIndex[t]][var].size();
-//    lineVarTupleSet[lineIndex[t]][var].push_back({encode, i});
-//
-//  }
 }
 
 void LineVarTupleSet::pop(const unsigned encode, const unsigned lineIndex,

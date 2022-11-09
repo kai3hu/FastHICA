@@ -32,9 +32,26 @@ public:
   void pushNCoveredTuple(const Coverage &coverage,
                            const std::vector<std::vector<int>> &coverByLineindex, const unsigned index);
 
-  void exchange_row(unsigned lineIndex1, unsigned lineIndex2) {
+    void exchange_row(unsigned lineIndex1, unsigned lineIndex2, unsigned strength, const Options options, std::vector<std::vector<unsigned>> array, Coverage coverage, unsigned index) {
     lineVarTupleSet[lineIndex1].swap(lineVarTupleSet[lineIndex2]);
     std::swap(lineNCoveredCount[lineIndex1], lineNCoveredCount[lineIndex2]);
+    std::vector<unsigned> tmpTuple(strength);
+    for (std::vector<unsigned> columns = combinadic.begin(strength);
+    columns[strength - 1] < options.size(); combinadic.next(columns)) {
+    for (unsigned j = 0; j < strength; ++j) {
+        tmpTuple[j] = array[lineIndex1][columns[j]];
+    }
+    unsigned encode = coverage.encode(columns, tmpTuple);
+    unsigned coverCount = coverage.coverCount(encode);
+        if (coverCount == index){
+            for (unsigned n = 0; n < strength; ++n){
+                for (unsigned m = 0; m< index; ++m){
+             if (varMapping[encode][n][m].row_index == lineIndex2)
+                 varMapping[encode][n][m].row_index = lineIndex1;
+                }
+            }
+        }
+    }
   }
   void pop_back_row() {
     lineVarTupleSet.pop_back();

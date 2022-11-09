@@ -184,7 +184,7 @@ void CoveringArray::actsInitialize(const std::string file_name) {
     }
   }
     int temsize = array.size();
-    for(int i=1;i<index;i++)
+    for(int i=1; i<index; i++)
     {
         for(int j=0;j<temsize;j++)
         {
@@ -207,9 +207,12 @@ void CoveringArray::actsInitialize(const std::string file_name) {
       }
       //			cover(coverage.encode(columns, tuple));
       unsigned encode = coverage.encode(columns, tuple);
-        if(coverByLineIndex[encode].size()<2){
-            coverByLineIndex[encode].push_back(lineIndex);}
-      coverage.cover(encode);
+        if(coverByLineIndex[encode].size()<index)
+        {
+            coverByLineIndex[encode].push_back(lineIndex);
+            
+        }
+            coverage.cover(encode);
     }
   }
   coverage.set_zero_invalid();
@@ -352,7 +355,7 @@ void CoveringArray::removeUselessRows() {
           entry.setRow(array.size() - 1);
         }
       }
-      NCoveredTuples.exchange_row(lineIndex, array.size() - 1);
+      NCoveredTuples.exchange_row(lineIndex, array.size() - 1, strength, specificationFile.getOptions() , array, coverage, index);
       NCoveredTuples.pop_back_row();
       array.pop_back();
     } else {
@@ -361,15 +364,14 @@ void CoveringArray::removeUselessRows() {
   }
 }
 
-void CoveringArray::removeOneRowRandom() {
+void CoveringArray::removeOneRowRandom() { //todo
   const Options &options = specificationFile.getOptions();
   const unsigned strength = specificationFile.getStrenth();
   const unsigned index = specificationFile.getIndex();
-  unsigned rowToremoveIndex =
-      mersenne.next(array.size() - testSet.getSetSize()) + testSet.getSetSize();
-
+  unsigned rowToremoveIndex = mersenne.next(array.size() - testSet.getSetSize()) + testSet.getSetSize();
+  unsigned LastIndex = array.size()-1;
   std::vector<unsigned> tmpTuple(strength);
-  for (std::vector<unsigned> columns = combinadic.begin(strength);
+    for (std::vector<unsigned> columns = combinadic.begin(strength);
        columns[strength - 1] < options.size(); combinadic.next(columns)) {
     for (unsigned j = 0; j < strength; ++j) {
       tmpTuple[j] = array[rowToremoveIndex][columns[j]];
@@ -377,9 +379,8 @@ void CoveringArray::removeOneRowRandom() {
     unsigned encode = coverage.encode(columns, tmpTuple);
     uncover(encode, rowToremoveIndex, index);
   }
-
   std::swap(array[array.size() - 1], array[rowToremoveIndex]);
-  NCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1);
+  NCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1, strength, specificationFile.getOptions() , array, coverage, index);
   NCoveredTuples.pop_back_row();
   for (auto &entry : entryTabu) {
     if (entry.getRow() == array.size() - 1) {
@@ -1425,24 +1426,48 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex, co
   unsigned coverCount = coverage.coverCount(encode);
   if (coverCount == index) {
     uncoveredTuples.pop(encode);
-    NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode),0);
-      const std::vector<unsigned> column =  coverage.getColumns(encode);
-      for( unsigned i = 1; i < index ; i++)
-      {
-          for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
-          {
-              for(unsigned k = 0; k < index ; k++){
-                  if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
-                  {
-                        break;
-                  }
-                  if ( k == index - 1 ){
-                      NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode),i);
-                  }
-               }
-
+      const std::vector<unsigned> &tuple = coverage.getTuple(encode);
+      const std::vector<unsigned> &columns = coverage.getColumns(encode);
+      NCoveredTuples.push(encode, oldLineIndex , coverage.getTuple(encode), 0);
+      unsigned k = 1;
+      for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
+          auto &line = array[lineIndex];
+          bool match = true;
+          for (size_t i = 0; i < columns.size(); ++i) {
+              if (tuple[i] != line[columns[i]]) {
+                  match = false;
+                  break;
+                  
+              }
+              
           }
+          if (match) {
+              NCoveredTuples.push(encode, lineIndex , coverage.getTuple(encode), k);
+              ++k;
+              }
+          if( k == index ) break;
+              
+          
       }
+      
+      
+      
+//    NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode),0);
+//    const std::vector<unsigned> column =  coverage.getColumns(encode);
+//    for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
+//          {
+//              unsigned i = 1;
+//              for(unsigned k = 0; k < column.size() ; k++){
+//                  if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
+//                  {
+//                        break;
+//                  }
+//                  if ( k == index - 1 ){
+//                      NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode),i);
+//                  }
+//               }
+//              i++;
+//      }
   }
   if (coverCount == index + 1) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
@@ -1510,9 +1535,9 @@ void CoveringArray::cover_with_lock(const unsigned encode,
 void CoveringArray::uncover(const unsigned encode,
                             const unsigned oldLineIndex, const unsigned index) {
   
-  coverage.uncover(encode);  //todo
+  coverage.uncover(encode);
   unsigned coverCount = coverage.coverCount(encode);
-  if (coverCount == index-1) {
+  if (coverCount == index - 1) {
     uncoveredTuples.push(encode);
     NCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
     
@@ -1520,40 +1545,47 @@ void CoveringArray::uncover(const unsigned encode,
   }
   if (coverCount == index) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
-  //  const std::vector<unsigned> &columns = coverage.getColumns(encode);
-  //  for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
-  //    if (lineIndex == oldLineIndex) {
-  //      continue;
-  //    }
-  //    auto &line = array[lineIndex];
-  //    bool match = true;
-  //    for (size_t i = 0; i < columns.size(); ++i) {
-  //      if (tuple[i] != line[columns[i]]) {
-  //        match = false;
-  //        break;
-  //      }
-  //    }
-  //    if (match) {
-        const std::vector<unsigned> column =  coverage.getColumns(encode);
-
-              for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
-              {
-                  for(unsigned k = 0; k < index ; k++){
-                      if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
-                      {
-                            break;
-                      }
-                      if ( k == index-1 && oldindex != oldLineIndex ){
-                          NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode),k); // mark
-                      }
-                   }
-
-              }
+    const std::vector<unsigned> &columns = coverage.getColumns(encode);
+      unsigned k = 0;
+    for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
+      if (lineIndex == oldLineIndex) {
+        continue;
+      }
+      auto &line = array[lineIndex];
+      bool match = true;
+      for (size_t i = 0; i < columns.size(); ++i) {
+        if (tuple[i] != line[columns[i]]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+          NCoveredTuples.push(encode, lineIndex , coverage.getTuple(encode), k);
+          ++k;
+      }
+          
+      }
+      
+   //  const std::vector<unsigned> column =  coverage.getColumns(encode);
+   //  for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
+   //  {
+   //      unsigned i = 0;
+   //      for(unsigned k = 0; k < column.size(); k++){
+   //          if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
+   //          {
+   //              break;
+   //          }
+   //          if ( k == index-1 && oldindex != oldLineIndex ){
+   //              NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode), i); // mark
+   //          }
+   //      }
+    //     i++;
+     }
     //      }
     //   break;
       
     }
-  }
+  
 
 
 void CoveringArray::uncover_with_lock(const unsigned encode,

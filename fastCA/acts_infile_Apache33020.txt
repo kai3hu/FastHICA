@@ -1,5 +1,5 @@
 [System]
-Name: Apache
+Name: acts_infile_Apache33020.txt
 
 [Parameter]
 p0(int): 0,1
@@ -7,7 +7,4 @@ p1(int): 0,1,2
 p2(int): 0,1
 p3(int): 0,1
 
-
-
 [Constraint]
-

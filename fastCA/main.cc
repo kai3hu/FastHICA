@@ -26,7 +26,7 @@ int main(int argc, char const *argv[]) {
   string testFile("");
 
     map<string, string> parameters_map = {{"--file", "../example/ex.txt"},
-                                          {"--strength", "2"},
+                                          {"--strength", "3"},
                                           {"--highindex", "2"},
                                           {"--time", "10"},
                                           {"--seed", "1"},
