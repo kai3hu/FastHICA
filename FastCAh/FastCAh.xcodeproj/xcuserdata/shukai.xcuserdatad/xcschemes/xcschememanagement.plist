@@ -4,7 +4,7 @@
 <dict>
 	<key>SchemeUserState</key>
 	<dict>
-		<key>FastCAh.xcscheme_^#shared#^_</key>
+		<key>fastcah.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
 			<integer>0</integer>
@@ -12,7 +12,7 @@
 	</dict>
 	<key>SuppressBuildableAutocreation</key>
 	<dict>
-		<key>B7BBB9512913AB880068131E</key>
+		<key>B74F9894292278E0007D4BA1</key>
 		<dict>
 			<key>primary</key>
 			<true/>

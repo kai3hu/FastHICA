@@ -31,7 +31,7 @@ class CoveringArray {
 public:
   CoveringArray(const SpecificationFile &specificationFile,
                 const ConstraintFile &constraintFile, TestSetFile &testSet,
-                unsigned long long maxT, int seed, int threadsNum,
+                unsigned long long maxT, int maxStep, int seed, int threadsNum,
                 int minScoreTaskSize, int minReplaceTaskSize,
                 std::string outfile);
   ~CoveringArray();
@@ -56,6 +56,7 @@ private:
 
   unsigned long long maxTime;
   unsigned long long step;
+  int maxStep;
   struct timeval start_time;
 
   int minScoreTaskSize;

@@ -55,14 +55,6 @@ void IO::readInstance(const std::string &filename,
   infile.close();
 }
 
-// void IO::readSystemName() {
-//   std::string line;
-//   getline(infile, line);
-//   std::istringstream is(line);
-//
-//   std::string tmp;
-//   is >> tmp >> systemName;
-// }
 
 void IO::readSystemName() {
   auto lead_pos = infile.tellg();
@@ -105,7 +97,7 @@ void IO::readSpecification(SpecificationFile &specification) {
     is.clear();
     is.str(line);
 
-    getline(is, varName, '('); // passing "(type):"
+    getline(is, varName, '(');
     getline(is, tmp, ':');
     strip(varName);
 
@@ -250,7 +242,6 @@ void IO::readTestSet(TestSetFile &testSet) {
       }
       auto &varName = names[i];
       test[pos[i]] = getFastcaValue(varName, value);
-      //      std::cout << pos[i] << '\t' << test[pos[i]] << std::endl;
     }
     testSet.addTest(test);
   }

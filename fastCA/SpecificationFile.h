@@ -33,7 +33,7 @@ public:
       options.initialize(value_counts);
     }
     const Options &getOptions() const { return options; }
-    unsigned getStrenth() const { return strength; }
+    unsigned getStrength() const { return strength; }
     unsigned getIndex() const { return index; }
 
   private:

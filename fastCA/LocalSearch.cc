@@ -9,9 +9,9 @@
 
 void localSearch(const SpecificationFile &specificationFile,
                  const ConstraintFile &constraintFile, TestSetFile &testSetFile,
-                 const unsigned long long maxTime, int seed, int threadsNum,
+                 const unsigned long long maxTime, const int maxStep, int seed, int threadsNum,
                  int minScoreTaskSize, int minReplaceTaskSize, std::string outfile) {
-  CoveringArray c(specificationFile, constraintFile, testSetFile, maxTime, seed,
+  CoveringArray c(specificationFile, constraintFile, testSetFile, maxTime, maxStep, seed,
                   threadsNum, minScoreTaskSize, minReplaceTaskSize, outfile);
   //	c.greedyConstraintInitialize2();
   ActsSolver ActsSolver;

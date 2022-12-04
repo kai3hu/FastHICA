@@ -16,7 +16,7 @@ void ActsSolver::solve(const SpecificationFile &specificationFile,
   acts_inputfile_name += ".txt";
   generate_input_file(specificationFile, constraintFile, acts_inputfile_name,
                       testSetFile);
-  const unsigned strenth = specificationFile.getStrenth();
+  const unsigned strenth = specificationFile.getStrength();
   std::string cmd =
       "java -Ddoi=" + std::to_string(strenth) + " -jar acts_cmd_2.92.jar ";
   if (!testSetFile.isEmpty()) {

@@ -15,6 +15,7 @@ int main(int argc, char const *argv[]) {
   string modelFile;
   string constrFile;
   unsigned long long maxTime;
+  int maxStep;
   int seed;
   int coverageStrength;
   int threadsNum;
@@ -25,14 +26,15 @@ int main(int argc, char const *argv[]) {
 
   string testFile("");
 
-    map<string, string> parameters_map = {{"--file", "../example/ex.txt"},
+  map<string, string> parameters_map = {{"--file", "../example/service.txt"},
                                           {"--strength", "3"},
                                           {"--highindex", "2"},
-                                          {"--time", "10"},
-                                          {"--seed", "1"},
+                                          {"--time", "1000"},
+                                          {"--step","1"},
+                                          {"--seed", "3"},
                                           {"--threads", "1"},
-                                          {"--minScoreTaskSize", "100"},
-                                          {"--minReplaceTaskSize", "120"},
+                                          {"--minScoreTaskSize", "1000"},
+                                          {"--minReplaceTaskSize", "1200"},
                                           {"--outfile", "./out.txt"}};
 
   vector<string> parameterVec;
@@ -68,6 +70,13 @@ int main(int argc, char const *argv[]) {
     maxTime = atoi(parameters_map["--time"].c_str());
   }
 
+
+  if (atoi(parameters_map["--step"].c_str()) < 0) {
+    return 1;
+  } else {
+    maxStep = atoi(parameters_map["--step"].c_str());
+  }
+
   seed = atoi(parameters_map["--seed"].c_str());
 
   if (atoi(parameters_map["--threads"].c_str()) < 1) {
@@ -98,7 +107,7 @@ int main(int argc, char const *argv[]) {
   specificationFile.setIndex(HighIndex);
     
   testSetFile.convert2acts(specificationFile);
-  localSearch(specificationFile, constraintFile, testSetFile, maxTime, seed,
+  localSearch(specificationFile, constraintFile, testSetFile, maxTime, maxStep, seed,
               threadsNum, minScoreTaskSize, minReplaceTaskSize, outfile);
 
   return 0;

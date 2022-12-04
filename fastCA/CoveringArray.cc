@@ -3,12 +3,12 @@
 #include "io.h"
 CoveringArray::CoveringArray(const SpecificationFile &specificationFile,
                              const ConstraintFile &constraintFile,
-                             TestSetFile &testSet, unsigned long long maxT,
+                             TestSetFile &testSet, unsigned long long maxT, int maxStep,
                              int seed, int threadsNum, int minScoreTaskSize,
                              int minReplaceTaskSize, std::string outfile)
     : validater(specificationFile), satSolver(constraintFile.isEmpty()),
       specificationFile(specificationFile), testSet(testSet),
-      coverage(specificationFile), entryTabu(4), maxTime(maxT) {
+      coverage(specificationFile), entryTabu(4), maxTime(maxT), maxStep(maxStep) {
 
   gettimeofday(&start_time, NULL);
   const Options &options = specificationFile.getOptions();
@@ -55,8 +55,6 @@ CoveringArray::CoveringArray(const SpecificationFile &specificationFile,
     }
   }
 
-  //		coverage.initialize(satSolver, option_constrained_indicator);
-  //		uncoveredTuples.initialize(specificationFile, coverage, true);
   coverage.unconstrained_initialize();
   uncoveredTuples.initialize(specificationFile, coverage);
 
@@ -68,33 +66,7 @@ CoveringArray::CoveringArray(const SpecificationFile &specificationFile,
   this->minScoreTaskSize = minScoreTaskSize;
   this->minReplaceTaskSize = minReplaceTaskSize;
 
-  // parallel
-  // if (this->threadsNum > 1) {
-  //   tasks.resize(threadsNum);
-  //   programStop.store(false);
 
-  //   for (int t = 0; t < threadsNum; ++t) {
-  //     taskReadyPtrs.push_back(new std::atomic<bool>(false));
-  //   }
-
-  //   for (int t = 1; t < threadsNum; ++t) {
-  //     threadsPtr.push_back(new std::thread([t, this] {
-  //       while (true) {
-  //
-  //         while (true) {
-  //           if (this->taskReadyPtrs[t]->load() || this->programStop.load())
-  //             break;
-  //         }
-  //         if (this->taskReadyPtrs[t]->load())
-  //           tasks[t]();
-  //         if (this->programStop.load()) {
-  //           break;
-  //         }
-  //         this->taskReadyPtrs[t]->store(false);
-  //       }
-  //     }));
-  //   }
-  // }
 
   if (this->threadsNum > 1) {
     tasks.resize(threadsNum);
@@ -122,7 +94,7 @@ CoveringArray::CoveringArray(const SpecificationFile &specificationFile,
 }
 
 CoveringArray::~CoveringArray() {
-  // parallel
+
   if (this->threadsNum > 1) {
     {
       std::vector<std::unique_lock<std::mutex>> lck_vec;
@@ -140,15 +112,12 @@ CoveringArray::~CoveringArray() {
       delete threadptr;
     }
 
-    // for (auto taskReadyPtr : taskReadyPtrs) {
-    //   delete taskReadyPtr;
-    // }
   }
 }
 
 void CoveringArray::actsInitialize(const std::string file_name) {
   const Options &options = specificationFile.getOptions();
-  const unsigned &strenth = specificationFile.getStrenth();
+  const unsigned &strenth = specificationFile.getStrength();
   const unsigned &index = specificationFile.getIndex();
   std::ifstream res_file(file_name);
   if (!res_file.is_open()) {
@@ -205,7 +174,6 @@ void CoveringArray::actsInitialize(const std::string file_name) {
       for (unsigned i = 0; i < strenth; ++i) {
         tuple[i] = line[columns[i]];
       }
-      //			cover(coverage.encode(columns, tuple));
       unsigned encode = coverage.encode(columns, tuple);
         if(coverByLineIndex[encode].size()<index)
         {
@@ -243,7 +211,7 @@ void CoveringArray::actsInitialize(const std::string file_name) {
 void CoveringArray::replaceRow(const unsigned lineIndex,
                                const unsigned encode) {
   std::vector<unsigned> &ranLine = array[lineIndex];
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   std::vector<unsigned> tmpTuple(strength);
   // uncover the tuples
@@ -288,7 +256,7 @@ void CoveringArray::replaceRowforTuple(const unsigned encode) {
       mersenne.next(array.size() - testSet.getSetSize()) + testSet.getSetSize();
 
   std::vector<unsigned> &ranLine = array[lineIndex];
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   std::vector<unsigned> tmpTuple(strength);
   // uncover the tuples
@@ -330,7 +298,7 @@ void CoveringArray::replaceRowforTuple(const unsigned encode) {
 
 void CoveringArray::removeUselessRows() {
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   std::vector<unsigned> tmpTuple(strength);
 
@@ -355,7 +323,22 @@ void CoveringArray::removeUselessRows() {
           entry.setRow(array.size() - 1);
         }
       }
-      NCoveredTuples.exchange_row(lineIndex, array.size() - 1, strength, specificationFile.getOptions() , array, coverage, index);
+      NCoveredTuples.exchange_row(lineIndex, array.size() - 1);
+        for (std::vector<unsigned> columns = combinadic.begin(strength);
+        columns[strength - 1] < options.size(); combinadic.next(columns)) {
+        for (unsigned j = 0; j < strength; ++j) {
+            tmpTuple[j] = array[lineIndex][columns[j]];
+        }
+        unsigned encode = coverage.encode(columns, tmpTuple);
+        unsigned coverCount = coverage.coverCount(encode);
+            if (coverCount == index){
+                for (unsigned mstrength = 0; mstrength < strength; ++ mstrength){
+                    for (unsigned mindex = 0; mindex < index; ++mindex){
+                NCoveredTuples.changemap(encode,mstrength,mindex,lineIndex,array.size() - 1);
+                    }
+                }
+            }
+        }
       NCoveredTuples.pop_back_row();
       array.pop_back();
     } else {
@@ -364,9 +347,9 @@ void CoveringArray::removeUselessRows() {
   }
 }
 
-void CoveringArray::removeOneRowRandom() { //todo
+void CoveringArray::removeOneRowRandom() { 
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   unsigned rowToremoveIndex = mersenne.next(array.size() - testSet.getSetSize()) + testSet.getSetSize();
   unsigned LastIndex = array.size()-1;
@@ -380,7 +363,24 @@ void CoveringArray::removeOneRowRandom() { //todo
     uncover(encode, rowToremoveIndex, index);
   }
   std::swap(array[array.size() - 1], array[rowToremoveIndex]);
-  NCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1, strength, specificationFile.getOptions() , array, coverage, index);
+  NCoveredTuples.exchange_row(rowToremoveIndex, array.size() - 1);
+    for (std::vector<unsigned> columns = combinadic.begin(strength);
+    columns[strength - 1] < options.size(); combinadic.next(columns)) {
+    for (unsigned j = 0; j < strength; ++j) {
+        tmpTuple[j] = array[rowToremoveIndex][columns[j]];
+    }
+    unsigned encode = coverage.encode(columns, tmpTuple);
+    unsigned coverCount = coverage.coverCount(encode);
+        if (coverCount == index){
+            for (unsigned mstrength = 0; mstrength < strength; ++ mstrength){
+                for (unsigned mindex = 0; mindex < index; ++mindex){
+            NCoveredTuples.changemap(encode,mstrength,mindex,rowToremoveIndex,array.size() - 1);
+                }
+            }
+        }
+    }
+    
+    
   NCoveredTuples.pop_back_row();
   for (auto &entry : entryTabu) {
     if (entry.getRow() == array.size() - 1) {
@@ -397,18 +397,20 @@ void CoveringArray::updateTestSet() { testSet.UpdateTestSetbyACTS(array); }
 
 void CoveringArray::optimize() {
   updateTestSet();
+  int tmpStep = step;
   while (true) {
     struct timeval end_time;
     gettimeofday(&end_time, NULL);
     double start_time_sec = start_time.tv_sec + start_time.tv_usec / 1000000.0;
     double end_time_sec = end_time.tv_sec + end_time.tv_usec / 1000000.0;
-    if (end_time_sec - start_time_sec > maxTime) {
-  //    break;
+    if (end_time_sec - start_time_sec > maxTime || step + 1 - tmpStep > 100000*maxStep) {
+      break;
     }
     if (uncoveredTuples.size() == 0) {
       removeUselessRows();
       bestArray = array;
       tmpPrint();
+      tmpStep = step;
       removeOneRowRandom();
     }
 
@@ -432,12 +434,14 @@ void CoveringArray::optimize() {
     tmpPrint();
   }
 
-  //  if (!verify(bestArray)) {
-  //    std::cout << "wrong answer!!!!!" << std::endl;
-  //    return;
-  //  }
+    
   std::cout << std::endl;
   std::cout << "Total steps : " << step << std::endl;
+  struct timeval end_time;
+  gettimeofday(&end_time, NULL);
+  double start_time_sec = start_time.tv_sec + start_time.tv_usec / 1000000.0;
+  double end_time_sec = end_time.tv_sec + end_time.tv_usec / 1000000.0;
+  std::cout << "Total time : " << end_time_sec - start_time_sec << std::endl;
 
   if (outfile == "") {
     printBestArray();
@@ -555,7 +559,7 @@ void CoveringArray::tabugw() {
     for (unsigned lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
       std::vector<unsigned> &line = array[lineIndex];
       unsigned diffCount = 0;
-      unsigned diffVar;
+      unsigned diffVar = 0;
       for (unsigned i = 0; i < tuple.size(); ++i) {
         if (line[columns[i]] != tuple[i]) {
           diffCount++;
@@ -759,18 +763,7 @@ void CoveringArray::tabugwParallel() {
     }
   }
 
-  // waitting the subtasks to be done
-  // while (true) {
-  //   bool running = false;
-  //   for (int i = 1; i < neededThreadsNum; ++i) {
-  //     running = running || taskReadyPtrs[i]->load();
-  //   }
-  //   if (!running) {
-  //     break;
-  //   }
-  // }
 
-  // merge the result of sub threads
   long long firstBestScore = std::numeric_limits<long long>::min();
   for (ThreadTmpResult &tmpRes : threadsTmpResult) {
     if (firstBestScore < tmpRes.firstBestScore) {
@@ -1072,7 +1065,7 @@ long long
 CoveringArray::multiVarRow(const std::vector<unsigned> &sortedMultiVars,
                            const unsigned lineIndex, const bool change) {
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   long long score = 0;
 
@@ -1209,20 +1202,27 @@ void CoveringArray::multiVarReplace(
 long long CoveringArray::varScoreOfRow(const unsigned var,
                                        const unsigned lineIndex) {
   const Options &options = specificationFile.getOptions();
+  const unsigned &Strength = specificationFile.getStrength();
+  const unsigned &Index = specificationFile.getIndex();
   std::vector<unsigned> &line = array[lineIndex];
   const unsigned varOption = options.option(var);
   if (line[varOption] == var) {
     return 0;
   }
   long long coverChangeCount = 0;
+  unsigned breakop = NCoveredTuples.getECbyLineVar(lineIndex, line[varOption]).size();
   for (auto tupleEncode : uncoveredTuples) {
     const std::vector<unsigned> &tuple = coverage.getTuple(tupleEncode);
     const std::vector<unsigned> &columns = coverage.getColumns(tupleEncode);
     bool match = false;
     bool needChange = true;
+    
     for (size_t i = 0; i < columns.size(); ++i) {
       if (columns[i] == varOption) {
-        match = true;
+          match = true;
+        if (tuple[i] == line[varOption]) {
+          breakop++;
+        }
         if (tuple[i] != var) {
           needChange = false;
           break;
@@ -1236,25 +1236,8 @@ long long CoveringArray::varScoreOfRow(const unsigned var,
       coverChangeCount++;
     }
   }
-  return coverChangeCount -
-         NCoveredTuples.getECbyLineVar(lineIndex, line[varOption]).size();
-  for (auto &ecEntry :
-       NCoveredTuples.getECbyLineVar(lineIndex, line[varOption])) {
-    unsigned tupleEncode = ecEntry.encode;
-    const std::vector<unsigned> &tuple = coverage.getTuple(tupleEncode);
-    const std::vector<unsigned> &columns = coverage.getColumns(tupleEncode);
-    bool needChange = true;
-    for (size_t i = 0; i < columns.size(); ++i) {
-      if (line[columns[i]] != tuple[i]) {
-        needChange = false;
-        break;
-      }
-    }
-    if (needChange) {
-      coverChangeCount--;
-    }
-  }
-  return coverChangeCount;
+  
+      return coverChangeCount - breakop;
 }
 bool CoveringArray::checkCovered(unsigned encode) {
   for (auto ec : uncoveredTuples) {
@@ -1267,7 +1250,7 @@ bool CoveringArray::checkCovered(unsigned encode) {
 
 void CoveringArray::replace(const unsigned var, const unsigned lineIndex) {
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned index = specificationFile.getIndex();
   std::vector<unsigned> &line = array[lineIndex];
   const unsigned varOption = options.option(var);
@@ -1283,7 +1266,7 @@ void CoveringArray::replace(const unsigned var, const unsigned lineIndex) {
   std::vector<unsigned> tmpSortedTupleToUncover(strength);
 
   for (std::vector<unsigned> columns = combinadic.begin(strength - 1);
-       columns[strength - 2] < line.size() - 1; combinadic.next(columns)) {
+       columns[strength - 2] < line.size() - 1; combinadic.next(columns)) {   // todo
     int add = 0;
     for (size_t i = 0, j = 0; i < columns.size(); ++i, ++j) {
       if (add == 0 && columns[i] >= varOption) {
@@ -1317,7 +1300,7 @@ void CoveringArray::replaceParallel(const unsigned var,
                                     const unsigned lineIndex) {
   std::vector<unsigned> &line = array[lineIndex];
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   const unsigned varOption = options.option(var);
 
   size_t taskNum = 0;
@@ -1380,7 +1363,7 @@ void CoveringArray::tabugwReplaceSubTask(const unsigned &var,
   {
     std::vector<unsigned> &line = array[lineIndex];
     const Options &options = specificationFile.getOptions();
-    const unsigned strength = specificationFile.getStrenth();
+    const unsigned strength = specificationFile.getStrength();
     const unsigned index = specificationFile.getIndex();
     const unsigned varOption = options.option(var);
 
@@ -1425,7 +1408,7 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex, co
   coverage.cover(encode);
   unsigned coverCount = coverage.coverCount(encode);
   if (coverCount == index) {
-    uncoveredTuples.pop(encode);
+      uncoveredTuples.pop(encode);
       const std::vector<unsigned> &tuple = coverage.getTuple(encode);
       const std::vector<unsigned> &columns = coverage.getColumns(encode);
       NCoveredTuples.push(encode, oldLineIndex , coverage.getTuple(encode), 0);
@@ -1437,7 +1420,6 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex, co
               if (tuple[i] != line[columns[i]]) {
                   match = false;
                   break;
-                  
               }
               
           }
@@ -1449,25 +1431,6 @@ void CoveringArray::cover(const unsigned encode, const unsigned oldLineIndex, co
               
           
       }
-      
-      
-      
-//    NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode),0);
-//    const std::vector<unsigned> column =  coverage.getColumns(encode);
-//    for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
-//          {
-//              unsigned i = 1;
-//              for(unsigned k = 0; k < column.size() ; k++){
-//                  if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
-//                  {
-//                        break;
-//                  }
-//                  if ( k == index - 1 ){
-//                      NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode),i);
-//                  }
-//               }
-//              i++;
-//      }
   }
   if (coverCount == index + 1) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
@@ -1496,15 +1459,32 @@ void CoveringArray::cover_with_lock(const unsigned encode,
                                     const unsigned oldLineIndex, const unsigned index) {
   coverage.cover(encode);
   unsigned coverCount = coverage.coverCount(encode);
+    
   if (coverCount == index) {
-    {
-      std::lock_guard<std::mutex> lg(uncoveredTuplesMutex);
       uncoveredTuples.pop(encode);
-    }
-    {
-      std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-//      NCoveredTuples.push(encode, oldLineIndex, coverage.getTuple(encode)); mark
-    }
+      const std::vector<unsigned> &tuple = coverage.getTuple(encode);
+      const std::vector<unsigned> &columns = coverage.getColumns(encode);
+      NCoveredTuples.push(encode, oldLineIndex , coverage.getTuple(encode), 0);
+      unsigned k = 1;
+      for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
+          auto &line = array[lineIndex];
+          bool match = true;
+          for (size_t i = 0; i < columns.size(); ++i) {
+              if (tuple[i] != line[columns[i]]) {
+                  match = false;
+                  break;
+                  
+              }
+              
+          }
+          if (match) {
+              NCoveredTuples.push(encode, lineIndex , coverage.getTuple(encode), k);
+              ++k;
+              }
+          if( k == index ) break;
+              
+          
+      }
   }
   if (coverCount == index+1) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
@@ -1546,6 +1526,45 @@ void CoveringArray::uncover(const unsigned encode,
   if (coverCount == index) {
     const std::vector<unsigned> &tuple = coverage.getTuple(encode);
     const std::vector<unsigned> &columns = coverage.getColumns(encode);
+    unsigned k = 0;
+    for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
+      if (lineIndex == oldLineIndex) {
+        continue;
+      }
+      auto &line = array[lineIndex];
+      bool match = true;
+      for (size_t i = 0; i < columns.size(); ++i) {
+        if (tuple[i] != line[columns[i]]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+          NCoveredTuples.push(encode, lineIndex , coverage.getTuple(encode), k);
+          ++k;
+       }      
+      if (k == index )break; 
+      }
+    }
+}
+
+void CoveringArray::uncover_with_lock(const unsigned encode,
+                                      const unsigned oldLineIndex, const unsigned index) {
+  coverage.uncover(encode);
+  unsigned coverCount = coverage.coverCount(encode);
+  if (coverCount == index - 1) {
+    {
+      std::lock_guard<std::mutex> lg(uncoveredTuplesMutex);
+      uncoveredTuples.push(encode);
+    }
+    {
+      std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
+      NCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
+    }
+  }
+    if (coverCount == index){
+    const std::vector<unsigned> &tuple = coverage.getTuple(encode);
+    const std::vector<unsigned> &columns = coverage.getColumns(encode);
       unsigned k = 0;
     for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
       if (lineIndex == oldLineIndex) {
@@ -1562,89 +1581,11 @@ void CoveringArray::uncover(const unsigned encode,
       if (match) {
           NCoveredTuples.push(encode, lineIndex , coverage.getTuple(encode), k);
           ++k;
-      }
-          
-      }
-      
-   //  const std::vector<unsigned> column =  coverage.getColumns(encode);
-   //  for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
-   //  {
-   //      unsigned i = 0;
-   //      for(unsigned k = 0; k < column.size(); k++){
-   //          if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
-   //          {
-   //              break;
-   //          }
-   //          if ( k == index-1 && oldindex != oldLineIndex ){
-   //              NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode), i); // mark
-   //          }
-   //      }
-    //     i++;
-     }
-    //      }
-    //   break;
-      
-    }
-  
-
-
-void CoveringArray::uncover_with_lock(const unsigned encode,
-                                      const unsigned oldLineIndex, const unsigned index) {
-  coverage.uncover(encode);
-  unsigned coverCount = coverage.coverCount(encode);
-  if (coverCount == 0) {
-    {
-      std::lock_guard<std::mutex> lg(uncoveredTuplesMutex);
-      uncoveredTuples.push(encode);
-    }
-    {
-      std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-      NCoveredTuples.pop(encode, oldLineIndex, coverage.getTuple(encode));
-    }
-  }
-  if (coverCount == 1) {
-    const std::vector<unsigned> &tuple = coverage.getTuple(encode);
-    const std::vector<unsigned> &columns = coverage.getColumns(encode);
-    for (size_t lineIndex = 0; lineIndex < array.size(); ++lineIndex) {
-      if (lineIndex == oldLineIndex) {
-        continue;
-      }
-      auto &line = array[lineIndex];
-      bool match = true;
-      for (size_t i = 0; i < columns.size(); ++i) {
-        if (tuple[i] != line[columns[i]]) {
-          match = false;
-          break;
-        }
-      }
-      if (match) {
-        {
-          std::lock_guard<std::mutex> lg(oneCoveredTuplesMutex);
-            NCoveredTuples.push(encode,lineIndex, tuple, 0);
-            const std::vector<unsigned> column =  coverage.getColumns(encode);
-              for( unsigned i = 1; i < index ; i++)
-              {
-                  for(unsigned oldindex = 0; oldindex < array.size(); oldindex++)
-                  {
-                      for(unsigned k = 0; k < index ; k++){
-                          if (array[oldindex][column[k]] != coverage.getTuple(encode)[k])
-                          {
-                                break;
-                          }
-                          if ( k == index - 1 ){
-                              NCoveredTuples.push(encode, oldindex , coverage.getTuple(encode),i); // mark
-                          }
-                       }
-
-                  }
-              }
-        }
-        break;
+       }
+      if (k == index )break;
       }
     }
-  }
 }
-
 void CoveringArray::tmpPrint() {
   struct timeval end_time;
   gettimeofday(&end_time, NULL);
@@ -1652,11 +1593,12 @@ void CoveringArray::tmpPrint() {
   double end_time_sec = end_time.tv_sec + end_time.tv_usec / 1000000.0;
   std::cout << end_time_sec - start_time_sec << '\t' << array.size() << '\t'
             << step << std::endl;
+  
 }
 
 bool CoveringArray::verify(
-    const std::vector<std::vector<unsigned>> &resultArray) {
-  const unsigned strength = specificationFile.getStrenth();
+  const std::vector<std::vector<unsigned>> &resultArray) {
+  const unsigned strength = specificationFile.getStrength();
   const Options &options = specificationFile.getOptions();
   Coverage tmpCoverage(specificationFile);
   tmpCoverage.initialize(satSolver, option_constrained_indicator);
@@ -1693,4 +1635,5 @@ bool CoveringArray::verify(
     ++lineIndex;
   }
   return tmpCoverage.allIsCovered();
-}
+  }
+    

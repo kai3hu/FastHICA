@@ -6,7 +6,7 @@ Coverage::Coverage(const SpecificationFile &specificationFile)
 void Coverage::unconstrained_initialize() {
   clock_t start = clock();
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   offsets.resize(pascalTriangle.nCr(options.size(), strength));
   //	unsigned offset_size = options.size() * (options.size() - 1) *
   //(options.size() - 2) / 6;
@@ -56,7 +56,7 @@ void Coverage::initialize(
     const std::vector<bool> &option_constrained_indicator) {
   clock_t start = clock();
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   offsets.resize(pascalTriangle.nCr(options.size(), strength));
   unsigned size = 0;
   unsigned offsetIndex = 0;
@@ -142,7 +142,7 @@ void Coverage::initialize(
 
 void Coverage::initialize(const std::vector<std::vector<unsigned>> &array) {
   unconstrained_initialize();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
   std::vector<unsigned> tuple(strength);
   for (std::vector<std::vector<unsigned>>::size_type lineIndex = 0;
        lineIndex < array.size(); ++lineIndex) {
@@ -165,7 +165,7 @@ void Coverage::initialize(const std::vector<std::vector<unsigned>> &array) {
 unsigned Coverage::encode(const std::vector<unsigned> &sortedColumns,
                           const std::vector<unsigned> &sortedSubset) {
   const Options &options = specificationFile.getOptions();
-  const unsigned strength = specificationFile.getStrenth();
+  const unsigned strength = specificationFile.getStrength();
 
   unsigned base = offsets[combinadic.encode(sortedColumns)];
   unsigned offset = sortedSubset[0] - options.firstSymbol(sortedColumns[0]);

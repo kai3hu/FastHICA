@@ -14,8 +14,8 @@ public:
 };
 struct Mapt {
 public:
-int row_index;
-size_t column_index;
+  unsigned row_index;
+  unsigned column_index;
 };
 
 
@@ -31,27 +31,16 @@ public:
 
   void pushNCoveredTuple(const Coverage &coverage,
                            const std::vector<std::vector<int>> &coverByLineindex, const unsigned index);
-
-    void exchange_row(unsigned lineIndex1, unsigned lineIndex2, unsigned strength, const Options options, std::vector<std::vector<unsigned>> array, Coverage coverage, unsigned index) {
+  void changemap(unsigned encode, unsigned strength, unsigned index, unsigned lineIndex1, unsigned lineIndex2)
+    {
+      if (varMapping[encode][strength][index].row_index == lineIndex2){
+                varMapping[encode][strength][index].row_index = lineIndex1;
+            }
+      
+  }
+    void exchange_row(unsigned lineIndex1, unsigned lineIndex2) {
     lineVarTupleSet[lineIndex1].swap(lineVarTupleSet[lineIndex2]);
     std::swap(lineNCoveredCount[lineIndex1], lineNCoveredCount[lineIndex2]);
-    std::vector<unsigned> tmpTuple(strength);
-    for (std::vector<unsigned> columns = combinadic.begin(strength);
-    columns[strength - 1] < options.size(); combinadic.next(columns)) {
-    for (unsigned j = 0; j < strength; ++j) {
-        tmpTuple[j] = array[lineIndex1][columns[j]];
-    }
-    unsigned encode = coverage.encode(columns, tmpTuple);
-    unsigned coverCount = coverage.coverCount(encode);
-        if (coverCount == index){
-            for (unsigned n = 0; n < strength; ++n){
-                for (unsigned m = 0; m< index; ++m){
-             if (varMapping[encode][n][m].row_index == lineIndex2)
-                 varMapping[encode][n][m].row_index = lineIndex1;
-                }
-            }
-        }
-    }
   }
   void pop_back_row() {
     lineVarTupleSet.pop_back();
@@ -69,8 +58,8 @@ public:
 private:
   std::vector<size_t> lineNCoveredCount;
 
-  std::vector<std::vector<std::vector<ECEntry>>> lineVarTupleSet;
-  std::vector<vector<vector<Mapt>>> varMapping; //
+  std::vector<vector<vector<ECEntry>>> lineVarTupleSet;
+  std::vector<vector<vector<Mapt>>> varMapping;
 };
 
 #endif /* end of include guard: LINEVARTUPLESET_H_MBOTX5KJ */

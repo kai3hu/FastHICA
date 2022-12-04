@@ -4,7 +4,7 @@ void TupleSet::initialize(const SpecificationFile &specificationFile,
                           const Coverage &coverage, bool fullfill) {
 
   const Options &options = specificationFile.getOptions();
-  unsigned strength = specificationFile.getStrenth();
+  unsigned strength = specificationFile.getStrength();
 
   unsigned MaxSize = 0;
   for (std::vector<unsigned> columns = combinadic.begin(strength);
